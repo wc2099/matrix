@@ -7,7 +7,7 @@
 
 Pod::Spec.new do |matrix|
   matrix.name             = 'matrix-wechat'
-  matrix.version          = '1.0.1'
+  matrix.version          = '2.1.0'
   matrix.summary          = 'Matrix for iOS/macOS is a performance probe tool developed and used by WeChat.'
   matrix.description      = <<-DESC
                             Matrix for iOS/macOS is a performance probe tool developed and used by WeChat. 
