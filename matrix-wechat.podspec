@@ -57,6 +57,7 @@ Pod::Spec.new do |matrix|
       "matrix/matrix-iOS/Matrix/WCMemoryStat/MemoryStatPlugin/WCMemoryStatPlugin.h", "matrix/matrix-iOS/Matrix/WCMemoryStat/MemoryStatPlugin/Record/WCMemoryStatModel.h",
       "matrix/matrix-iOS/Matrix/WCMemoryStat/MemoryLogger/memory_stat_err_code.h", "matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/WCCrashBlockMonitorPlugin.h",
       "matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/WCCrashBlockMonitorPlugin+Upload.h","matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/WCCrashBlockMonitorConfig.h",
+"matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/WCReportStrategyDelegate.h",
       "matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/WCCrashBlockMonitorDelegate.h","matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/Utility/WCCrashReportInfoUtil.h",
       "matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/Utility/WCCrashReportInterpreter.h","matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/File/WCCrashBlockFileHandler.h",
       "matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/BlockMonitor/WCBlockTypeDef.h","matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/BlockMonitor/WCBlockMonitorConfiguration.h",
