@@ -38,6 +38,7 @@ Pod::Spec.new do |matrix|
 
   non_arc_files_1           = "matrix/matrix-iOS/Matrix/Matrix/Util/MatrixBaseModel.{h,mm}"
   non_arc_files_2           = "matrix/matrix-iOS/Matrix/WCMemoryStat/MemoryLogger/ObjectEvent/nsobject_hook.{h,mm}"
+  non_arc_files_3           = "matrix/matrix-iOS/Matrix/WCFPSMonitor/Logger/WCFPSLogger.{h,mm}"
 
   matrix.subspec 'matrixNonARC1' do |non_arc1|
     non_arc1.requires_arc = false
@@ -48,7 +49,7 @@ Pod::Spec.new do |matrix|
   matrix.subspec 'matrixARC' do |arc|
     arc.requires_arc     = true
     arc.source_files     = "matrix/matrix-iOS/Matrix/**/*.{h,m,mm,c,cpp}"
-    arc.exclude_files    = [non_arc_files_1,non_arc_files_2]
+    arc.exclude_files    = [non_arc_files_1,non_arc_files_2,non_arc_files_3]
     arc.public_header_files = ["matrix/matrix-iOS/Matrix/Matrix/matrix.h", "matrix/matrix-iOS/Matrix/Matrix/MatrixFramework.h" ,
       "matrix/matrix-iOS/Matrix/Matrix/AppReboot/MatrixAppRebootType.h","matrix/matrix-iOS/Matrix/Matrix/Issue/MatrixIssue.h",
       "matrix/matrix-iOS/Matrix/Matrix/Plugin/*.{h}",
@@ -57,6 +58,8 @@ Pod::Spec.new do |matrix|
       "matrix/matrix-iOS/Matrix/WCMemoryStat/MemoryStatPlugin/WCMemoryStatPlugin.h", "matrix/matrix-iOS/Matrix/WCMemoryStat/MemoryStatPlugin/Record/WCMemoryStatModel.h",
       "matrix/matrix-iOS/Matrix/WCMemoryStat/MemoryLogger/memory_stat_err_code.h", "matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/WCCrashBlockMonitorPlugin.h",
       "matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/WCCrashBlockMonitorPlugin+Upload.h","matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/WCCrashBlockMonitorConfig.h",
+     "matrix/matrix-iOS/Matrix/WCFPSMonitor/Plugin/WCFPSMonitorConfig",
+  "matrix/matrix-iOS/Matrix/WCFPSMonitor/Plugin/WCFPSMonitorPlugin",
 "matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/WCReportStrategyDelegate.h",
       "matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/WCCrashBlockMonitorDelegate.h","matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/Utility/WCCrashReportInfoUtil.h",
       "matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/Utility/WCCrashReportInterpreter.h","matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/File/WCCrashBlockFileHandler.h",
@@ -70,6 +73,12 @@ Pod::Spec.new do |matrix|
     non_arc2.requires_arc = false
     non_arc2.source_files = non_arc_files_2
     non_arc2.dependency 'matrix-wechat/matrixARC'
+  end
+  
+  matrix.subspec 'matrixNonARC3' do |non_arc3|
+    non_arc3.requires_arc = false
+    non_arc3.source_files = non_arc_files_3
+    non_arc3.dependency 'matrix-wechat/matrixARC'
   end
 
 end
