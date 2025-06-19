@@ -36,6 +36,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <assert.h>
 
 #ifdef __LP64__
 #define STRUCT_NLIST struct nlist_64
