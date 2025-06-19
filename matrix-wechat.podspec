@@ -60,6 +60,8 @@ Pod::Spec.new do |matrix|
       "matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/WCCrashBlockMonitorPlugin+Upload.h","matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/WCCrashBlockMonitorConfig.h",
      "matrix/matrix-iOS/Matrix/WCFPSMonitor/Plugin/WCFPSMonitorConfig.h",
   "matrix/matrix-iOS/Matrix/WCFPSMonitor/Plugin/WCFPSMonitorPlugin.h",
+    "matrix/matrix-iOS/Matrix/WCFPSMonitor/Logger/WCFPSRecorder.h",
+    "matrix/matrix-iOS/Matrix/WCFPSMonitor/Logger/WCFPSLogger.h",
 "matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/WCReportStrategyDelegate.h",
       "matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/WCCrashBlockMonitorDelegate.h","matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/Utility/WCCrashReportInfoUtil.h",
       "matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/Utility/WCCrashReportInterpreter.h","matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/File/WCCrashBlockFileHandler.h",
