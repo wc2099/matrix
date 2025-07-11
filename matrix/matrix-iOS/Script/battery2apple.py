@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 #-*- coding: utf-8 -*-
 '''
 @Author: mattzheng
@@ -10,15 +10,17 @@
 import json
 import os
 import sys
-import cgi
+from html import escape  # 替代 cgi.escape
 from datetime import datetime
 import traceback
+from importlib import reload  # python3 reload
 
 MM_IMG_LIST = ['MicroMessenger', 'WeChat', 'WeChatShareExtension', 'WeChatWatchExtension']
 Component_IMG_LIST = ['MMCommon', 'MMCoreFoundation', 'MMPLCrashReporter', 'PublicComponentDylib', 'MMFoundationDylib','MMLibHooks', 'matrixreport', 'Matrix', 'QBar']
 
-reload(sys)
-sys.setdefaultencoding('utf8')
+# Python3 默认utf-8编码，无需setdefaultencoding
+# reload(sys)
+# sys.setdefaultencoding('utf8')
 
 def is_image_wechat(image_name):
     return image_name in MM_IMG_LIST + Component_IMG_LIST
@@ -128,7 +130,7 @@ def get_time(report):
     if not timestamp:
         return ''
 
-    if type(timestamp) == type(0):
+    if isinstance(timestamp, int):
         return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
     else:
         return timestamp
@@ -211,7 +213,7 @@ def parse_system_info(report):
     os_table ='%s_%s' %(_s('system_version').replace('.','_'),  _s('os_version'))
     if _s('cpu_arch') == "arm64e":
         os_table += '_%s' % _s('cpu_arch')
-    print "os_table:", os_table
+    print("os_table:", os_table)
     
     user_info = report.get("user", None)
     if user_info and user_info.get('WeChat'):
@@ -248,7 +250,7 @@ def zombie_exception(report):
     last_addr = last_exception['address']
     thread = get_crash_thread(report)
     registers = thread['registers']['basic']
-    for reg, addr in registers:
+    for reg, addr in registers.items():
         if addr == last_addr:
             return True
 
@@ -261,7 +263,7 @@ def parse_error_info(report):
         return [] 
     error = crash.get('error')
     if not error:
-        print "waring: no error found in crash"
+        print("waring: no error found in crash")
         return []
     mach = error['mach']
     signal = error['signal']
@@ -285,7 +287,7 @@ def parse_error_info(report):
     result.append('Crashed Thread:  {0}'.format(crash_thread))
 
     diagnosis = crash.get('diagnosis', None)
-    #print "fuck haha", diagnosis
+    #print("fuck haha", diagnosis)
     if diagnosis:
         result.append('\nCrashDoctor Diagnosis: {0}'.format(diagnosis))
         #print result
@@ -304,7 +306,7 @@ def parse_crash_reason(report):
 
     error = crash.get('error')
     if not error:
-        print "warning: no error found in crash"
+        print("warning: no error found in crash")
         return []
     crash_type = error['type']
 
@@ -338,66 +340,92 @@ def parse_crash_reason(report):
 def parse_backtrace(result, img_info, stack_string, mask_pc=True):
     num = 0
     
-    for trace in stack_string:
+    for i, trace in enumerate(stack_string):
         try:
+            # 检查 instruction_address 是否存在
+            if 'instruction_address' not in trace:
+                print(f"Warning: trace[{i}] missing 'instruction_address', skipping")
+                continue
+
+            addr_val = trace['instruction_address']
+            # 如果不是整数，尝试转换（支持字符串16进制）
+            if not isinstance(addr_val, int):
+                try:
+                    addr_val = int(addr_val, 0)
+                except Exception as e:
+                    print(f"Warning: trace[{i}] instruction_address '{trace['instruction_address']}' cannot convert to int: {e}")
+                    continue
+
             if mask_pc:
-                pc = trace['instruction_address'] & 0x0000000fffffffff
+                pc = addr_val & 0x0000000fffffffff
             else:
-                pc = trace['instruction_address']
-        except:
+                pc = addr_val
+
+            # 这里改成用 get 获取 image_name，缺失时用 None
+            img_name = trace.get('image_name', None)
+            if not img_name:
+                # image_name 缺失时，尝试用其它字段替代或跳过
+                # 这里我们跳过此帧，防止报错
+                print(f"Warning: trace[{i}] missing 'image_name', skipping this frame")
+                continue
+
+            img_name = os.path.basename(img_name)
+
+            img = img_info.get(img_name)
+            if not img:
+                # 尝试通过地址范围查找
+                for name in img_info:
+                    img_candidate = img_info[name]
+                    if img_candidate['image_addr'] <= pc <= img_candidate['image_addr'] + img_candidate['image_size']:
+                        img = img_candidate
+                        break
+            if not img:
+                print(f"Error: no image found for pc: 0x{pc:x}, trace[{i}] image_name: {img_name}")
+                result.append('{0:<4}{1:31} 0x{2:016x}'.format(num, 'unknown', pc))
+                num += 1
+                continue
+
+            uuid = img.get('uuid', '').lower().replace('-', '')
+            obj_addr = img.get('image_addr', 0)
+            offset = pc - obj_addr
+
+            symbol_name = trace.get('object_name', None)
+            symbol_addr = trace.get('object_address', 0)
+
+            # 处理符号名称
+            is_unsymbolicated = False
+            if symbol_name:
+                symbol_name = symbol_name.replace('(in ', '(')[:-1] if symbol_name.endswith(')') else symbol_name
+            else:
+                is_unsymbolicated = True
+
+            if symbol_name == '<redacted>':
+                is_unsymbolicated = True
+
+            if img_name in (symbol_name or ''):
+                preamble = '+ {0}) [0x{1:016x}]'.format(pc - obj_addr, pc)
+            else:
+                preamble = '({0} + {1}) [0x{2:016x}]'.format(img_name, pc - obj_addr, pc)
+
+            if is_unsymbolicated:
+                line = '{0}'.format(preamble)
+            else:
+                line = '{0} {1}'.format(symbol_name, preamble)
+
+            _frame = {"symbol": line, "child": []}
+            result.append(_frame)
+            num += 1
+
+            # 递归处理子栈帧
+            if trace.get("child"):
+                parse_backtrace(_frame['child'], img_info, trace['child'], mask_pc)
+
+        except Exception as e:
+            print(f"Exception in parse_backtrace at trace[{i}]: {e}")
+            import traceback
             traceback.print_exc()
             continue
-        
-        img_name = os.path.basename(trace['image_name'])
-        img = img_info.get(img_name)
-        if not img:
-            print "fuck"
-            for name in img_info:
-                if img_info[name]['image_addr'] <= pc <= img_info[name]['image_addr']+ img_info[name]['image_size']:
-                    img = img_info[name] 
-                    break
-        if not img:
-            print "error, no img found for pc: %s, instruction_address: %s" % (pc, trace['instruction_address'])
-            print img_name
-            result.append('{0:<4}{1:31} 0x{2:016x}'.format(num, 'unknown', pc))
-            num += 1
-            continue
 
-        uuid = img['uuid'].lower().replace('-', '') 
-        obj_addr = img['image_addr']
-        offset = pc - obj_addr 
-        
-        symbol_name = trace.get('object_name', None)
-        symbol_addr = trace.get('object_address', 0)
-
-        local_symbol_name = trace.get('object_name')
-        #preamble = '{0:<4}{1} 0x{2:016x}'.format(trace.get("sample"), img_name, pc)
-        #unsymbolicated = '0x{0:04x} + {1}'.format(obj_addr, pc-obj_addr)
-        symbolicated = '(null)'
-        is_unsymbolicated = False
-        if symbol_name:
-            symbol_name = symbol_name.replace('(in ', '(')[:-1]
-            symbolicated = '{0} {1}'.format(trace.get("sample"), symbol_name)
-            #symbolicated = '{0} + {1}'.format(symbol_name, pc-symbol_addr)
-        else:
-            is_unsymbolicated = True
-        if symbol_name == '<redacted>':
-            is_unsymbolicated = True
-
-        if img_name in symbol_name:
-            preamble = '+ {0}) [0x{1:016x}]'.format(pc-obj_addr, pc)
-        else:
-            preamble = '({0} + {1}) [0x{2:016x}]'.format(img_name, pc-obj_addr, pc)
-        if is_unsymbolicated:
-            line = '{0}'.format(preamble)
-        else:
-            line = '{0} {1}'.format(symbolicated, preamble)#, unsymbolicated)
-
-        _frame = {"symbol": line, "child": []}     
-        result.append(_frame)     
-        if trace.get("child"):
-            parse_backtrace(_frame['child'], img_info, trace['child'], mask_pc)
-         
             
 def format_stack(result, prefix, stack):
     for item in stack:
@@ -444,7 +472,7 @@ def parse_thread_list(report):
 
 def get_register_order(cpu):
     cpu = cpu.lower()
-    #print "cpu %s" % cpu
+    #print("cpu %s" % cpu)
     arm = [ 'x'+str(i) for i in range(30)] + ['fp','sp', 'lr', 'pc',
            'cpsr']
     x86 = ['eax', 'ebx', 'ecx', 'edx', 'edi', 'esi', 'ebp',
@@ -487,7 +515,7 @@ def parse_cpu_state(report):
             line = ''
         try:
             line += '{0:>6}: 0x{1:016x} '.format(reg, registers.get(reg, 0))
-        except:
+        except Exception:
             continue
 
     if line:
@@ -519,8 +547,8 @@ def parse_binary_images(report):
             path = image['name']
             name = os.path.basename(path)
             uuid = image['uuid'].lower().replace('-', '')
-            print 'parse_binary_images'
-            print name, uuid
+            print('parse_binary_images')
+            print(name, uuid)
             is_base = '+' if path==exe_path else ' '
             if False:#image_count <=10 and not is_image_wechat(name) and simple_symbol_find.uuid_find(uuid) == False:
                 #name =  "<em style=\"color: red;\">%s</em>"%name
@@ -529,14 +557,14 @@ def parse_binary_images(report):
                             uuid, path))
             else:
                 if name == 'WeChat':
-                    print '{0:>#18x} - {1:>#18x} {2}{3}  <{4}> {5}'.format(addr, addr+size-1, is_base, name,uuid, path)
+                    print('{0:>#18x} - {1:>#18x} {2}{3}  <{4}> {5}'.format(addr, addr+size-1, is_base, name,uuid, path))
                     pass
                 result.append('{0:>#18x} - {1:>#18x} {2}{3}  <{4}> {5}'\
                     .format(addr, addr+size-1, is_base, name,
                             uuid, path))
-        except:
+        except Exception:
             traceback.print_exc()
-            print image
+            print(image)
             return
             continue
 
@@ -577,7 +605,7 @@ def parse_app_info(report):
         app_stats["Identifier"] = '{0}'.format(_i('id'))
         app_stats['Version'] = '{0} ({1})'.format(_s('CFBundleShortVersionString'), _s('CFBundleVersion'))
 
-    except:
+    except Exception:
         traceback.print_exc()
 
     user_info = report.get("user", None)
@@ -703,7 +731,7 @@ def parse_other_info(report):
     result = ['']
     user_info = report.get("user", None)
     if not user_info or not user_info.get("WeChat", None) or not user_info["WeChat"].get("log"):
-        print "no log found..."
+        print("no log found...")
         return result 
 
     log_list = user_info["WeChat"]["log"][-2:]
@@ -720,7 +748,7 @@ def ks_json_2_apple(report, fout):
         user_info = parse_user_info(report)
         for line in user_info:
             fout.write(line+'\n')
-    except:
+    except Exception:
         traceback.print_exc() 
     
     app_info = parse_app_info(report)
@@ -733,41 +761,41 @@ def ks_json_2_apple(report, fout):
     #    fout.write(line+'\n')
     stack_info = parse_stack_info(report)
     for line in stack_info:
-        line = cgi.escape(line)
+        line = escape(line)
         fout.write(line+'\n')
 
     cpu_state = parse_cpu_state(report)
     for line in cpu_state:
-        line = cgi.escape(line)
+        line = escape(line)
         fout.write(line+'\n')
 
     images = parse_binary_images(report)
     for line in images:
-        line = cgi.escape(line)
+        line = escape(line)
         fout.write(line+'\n')
 
     extra = parse_extra_info(report)
     for line in extra:
-        line = cgi.escape(line)
+        line = escape(line)
         fout.write(line+'\n')
     
     log_info = parse_log_info(report)
     for line in log_info:
-        line = cgi.escape(line)
+        line = escape(line)
         fout.write(line+'\n')
     
 if __name__ == '__main__':
-    reload(sys)
-    sys.setdefaultencoding('utf-8')
+    # reload(sys)
+    # sys.setdefaultencoding('utf-8')
     if len(sys.argv) != 3:
-        print "usage: python2.7 %s json_file out_file" % sys.argv[0]
+        print("usage: python3 %s json_file out_file" % sys.argv[0])
         sys.exit(1)
 
-    report = json.load(open(sys.argv[1]))
-    fout = open(sys.argv[2], 'w')
-    if not isinstance(report, list):
-        report = [report]
-    
-    for item in report:
-        ks_json_2_apple(item, fout)
-    fout.close()
+    with open(sys.argv[1], 'r', encoding='utf-8') as f:
+        report = json.load(f)
+    with open(sys.argv[2], 'w', encoding='utf-8') as fout:
+        if not isinstance(report, list):
+            report = [report]
+        
+        for item in report:
+            ks_json_2_apple(item, fout)
